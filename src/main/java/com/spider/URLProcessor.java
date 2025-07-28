@@ -2,55 +2,105 @@ package com.spider;
 
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.Set;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.jsoup.nodes.Element;
 
 public class URLProcessor {
-    public List<URL> process(URL url) throws Exception {
-        Document doc = getURLContents(url.toString());
-        Elements links = doc.select("a[href]");
-
-        List<URL> result = new ArrayList<>();
-        for (Element link : links) {
-            String href = link.attr("href");
-            Optional<URL> fullURL = makeUniformURL(url, href);
-            if (fullURL.isEmpty()) {
-                System.out.printf("skipping: %s\n", href);
-                continue;
-            }
-
-            System.out.println(fullURL.get());
-            // TODO: complete imlementation.
-        }
-
-        return result;
+    public static record ProcessResult(
+            List<URL> urls,
+            Set<String> skipped) {
     }
 
-    private Document getURLContents(String url) throws Exception {
+    public ProcessResult process(URL url) throws Exception {
+        RawProcessResult rawURLs = getPageRawLinks(url);
+        List<URL> result = new ArrayList<>();
+        for (String rawURL : rawURLs.urls) {
+            Optional<URL> fullURL = makeUniformURL(url, rawURL);
+            if (fullURL.isPresent()) {
+                result.add(fullURL.get());
+            } else {
+                rawURLs.skipped.add(rawURL);
+            }
+        }
+
+        ProcessResult processResults = new ProcessResult(result, rawURLs.skipped);
+        return processResults;
+    }
+
+    public static record RawProcessResult(
+            List<String> urls,
+            Set<String> skipped) {
+    }
+
+    private RawProcessResult getPageRawLinks(URL url) throws Exception {
+        Document doc = getURLContents(url);
+        if (doc == null) {
+            return new RawProcessResult(new ArrayList<>(), new HashSet<>() {
+                {
+                    add(url.toString());
+                }
+            });
+        }
+
+        Elements links = doc.select("a[href]");
+        List<String> urls = new ArrayList<>();
+        for (Element link : links) {
+            String href = link.attr("href");
+            if (href.isEmpty() || href.isBlank() || href.trim().equals("#")) {
+                continue;
+            }
+            urls.add(href);
+        }
+
+        RawProcessResult rawResult = new RawProcessResult(urls, new HashSet<>());
+        return rawResult;
+    }
+
+    private Document getURLContents(URL url) throws Exception {
+        ContentType contentType = getContentType(url);
+        if (contentType != ContentType.HTML) {
+            return null;
+        }
+
         System.out.printf("Download page: %s\n", url);
-        Document doc = Jsoup.connect(url).get();
+        Document doc = Jsoup.connect(url.toString()).get();
         return doc;
     }
 
-    private Optional<URL> makeUniformURL(URL pageURL, String href) {
-        if (href.isEmpty() || href.startsWith("#")) {
-            return Optional.empty();
-        }
+    /**
+     * we will only download and scrape web pages. This method will be used to
+     * identify if a url returns a webpage or not.
+     */
+    private ContentType getContentType(URL url) throws Exception {
+        URLConnection conn = url.openConnection();
+        String contentType = conn.getContentType();
+        return contentType.startsWith("text/html") ? ContentType.HTML : ContentType.Other;
+    }
 
+    private Optional<URL> makeUniformURL(URL pageURL, String href) {
         String protocol = pageURL.getProtocol();
         String host = pageURL.getHost();
 
         if (href.startsWith("/")) {
-            String url = pageURL.getProtocol() + "://" + host + href;
+            String url = String.format("%s://%s%s", protocol, host, href);
             try {
-                return Optional.of(new URI(url).toURL());
+                URL currentURL = new URI(url).toURL();
+                URI uri = currentURL.toURI();
+
+                // construct URL without query and fragment.
+                URI baseURI = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(),
+                        null, null);
+                return Optional.of(baseURI.toURL());
             } catch (Exception ex) {
+                System.err.println("error: " + ex.getMessage());
                 return Optional.empty();
             }
         }
@@ -62,6 +112,7 @@ public class URLProcessor {
                     return Optional.of(url);
                 }
             } catch (Exception ex) {
+                System.err.println("error: " + ex.getMessage());
                 return Optional.empty();
             }
         }

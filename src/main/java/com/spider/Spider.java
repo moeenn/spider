@@ -1,19 +1,21 @@
 package com.spider;
 
 import java.net.URL;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.HashSet;
+import java.util.Set;
+import com.spider.URLProcessor.ProcessResult;
 
 public class Spider {
-    private Queue<URL> urls;
+    private Set<URL> urls;
+    private Set<String> skipped;
     private URLProcessor processor;
 
     public Spider(URL startURL) {
         this.processor = new URLProcessor();
-        this.urls = new LinkedList<URL>() {
+        this.skipped = new HashSet<>();
+        this.urls = new HashSet<URL>() {
             {
-                push(startURL);
+                add(startURL);
             }
         };
     }
@@ -21,8 +23,9 @@ public class Spider {
     private void processQueue() {
         for (URL url : urls) {
             try {
-                List<URL> pageURLs = processor.process(url);
-                urls.addAll(pageURLs);
+                ProcessResult pageURLs = processor.process(url);
+                urls.addAll(pageURLs.urls());
+                skipped.addAll(pageURLs.skipped());
             } catch (Exception ex) {
                 System.err.printf("error: %s\n", ex.getMessage());
             }
@@ -31,5 +34,16 @@ public class Spider {
 
     public void run() {
         processQueue();
+
+        // TODO: remove after testing.
+        System.out.println("URLs :: ");
+        for (URL url : urls) {
+            System.out.println(url);
+        }
+
+        System.out.printf("\n\nSkipped ::\n");
+        for (String s : skipped) {
+            System.out.println(s);
+        }
     }
 }
