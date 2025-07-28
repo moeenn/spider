@@ -21,7 +21,11 @@ public class CommandLineArgs {
         }
 
         try {
-            url = new URI(commandLine.getOptionValue(URL_FLAG_NAME)).toURL();
+            String rawURL = commandLine.getOptionValue(URL_FLAG_NAME);
+            if (!rawURL.endsWith("/")) {
+                rawURL += "/";
+            }
+            url = new URI(rawURL).toURL();
         } catch (Exception ex) {
             throw new Exception("Invalid url argument: " + ex.getMessage());
         }

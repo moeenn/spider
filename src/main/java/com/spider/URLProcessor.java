@@ -54,7 +54,7 @@ public class URLProcessor {
         List<String> urls = new ArrayList<>();
         for (Element link : links) {
             String href = link.attr("href");
-            if (href.isEmpty() || href.isBlank() || href.trim().equals("#")) {
+            if (href.isEmpty() || href.isBlank() || href.trim().equals("#") || href.trim().startsWith("#")) {
                 continue;
             }
             urls.add(href);
