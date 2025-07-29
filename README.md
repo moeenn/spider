@@ -1,4 +1,6 @@
 ## spider
+Crawl through any website and get report of all pages within the website.
+
 
 ### Commands
 
