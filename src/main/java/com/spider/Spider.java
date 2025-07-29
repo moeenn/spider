@@ -6,12 +6,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+// import java.util.concurrent.ExecutorService;
+// import java.util.concurrent.Executors;
+
 import com.spider.URLProcessor.ProcessResult;
+import com.spider.reporter.ReportArgs;
+import com.spider.reporter.Reporter;
 
 public class Spider {
     private Map<String, QueueEntry> urls;
     private Set<String> skipped;
     private URLProcessor processor;
+    // private int maxParallel = 4;
+    // private ExecutorService executor;
 
     public Spider(URL startURL) {
         this.processor = new URLProcessor();
@@ -21,6 +28,9 @@ public class Spider {
                 put(startURL.toString(), new QueueEntry(startURL));
             }
         };
+
+        // executor = Executors.newFixedThreadPool(maxParallel,
+        // Thread.ofVirtual().factory());
     }
 
     private void processQueue() {
@@ -30,26 +40,26 @@ public class Spider {
         }
 
         for (QueueEntry entry : urls.values()) {
-            if (entry.getStatus().equals(QueueEntryStatus.PENDING)) {
-                try {
-                    Optional<ProcessResult> pageURLs = processor.process(entry.getUrl());
-                    if (!pageURLs.isPresent()) {
-                        entry.setStatus(QueueEntryStatus.STATIC_ASSET);
-                        continue;
-                    }
+            if (!entry.getStatus().equals(QueueEntryStatus.PENDING)) {
+                continue;
+            }
 
-                    entry.setStatus(QueueEntryStatus.COMPLETED);
-                    skipped.addAll(pageURLs.get().skipped());
-                    for (URL newURL : pageURLs.get().urls()) {
-                        if (urls.containsKey(newURL.toString())) {
-                            continue;
-                        } else {
-                            urls.put(newURL.toString(), new QueueEntry(newURL));
-                        }
-                    }
-                } catch (Exception ex) {
-                    entry.setStatus(QueueEntryStatus.ERRORED);
+            try {
+                Optional<ProcessResult> pageURLs = processor.process(entry.getUrl());
+                if (!pageURLs.isPresent()) {
+                    entry.setStatus(QueueEntryStatus.STATIC);
+                    continue;
                 }
+
+                entry.setStatus(QueueEntryStatus.COMPLETED);
+                skipped.addAll(pageURLs.get().skipped());
+                for (URL newURL : pageURLs.get().urls()) {
+                    if (!urls.containsKey(newURL.toString())) {
+                        urls.put(newURL.toString(), new QueueEntry(newURL));
+                    }
+                }
+            } catch (Exception ex) {
+                entry.setStatus(QueueEntryStatus.ERRORED);
             }
         }
 
@@ -60,18 +70,11 @@ public class Spider {
         processQueue();
     }
 
-    public String getCSVReport() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("URL,Status\n");
+    public String getReport(Reporter reporter) {
+        ReportArgs args = new ReportArgs(
+                urls.values().stream().toList(),
+                skipped);
 
-        for (QueueEntry entry : urls.values()) {
-            builder.append(entry.getUrl() + "," + entry.getStatus() + "\n");
-        }
-
-        for (String sk : skipped) {
-            builder.append(sk + "," + "SKIPPED\n");
-        }
-
-        return builder.toString();
+        return reporter.report(args);
     }
 }

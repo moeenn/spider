@@ -14,6 +14,8 @@ import org.jsoup.select.Elements;
 import org.jsoup.nodes.Element;
 
 public class URLProcessor {
+    private final String HTML_CONTENT_TYPE_PREFIX = "text/html";
+
     public static record ProcessResult(
             List<URL> urls,
             Set<String> skipped) {
@@ -65,8 +67,8 @@ public class URLProcessor {
     }
 
     private Document getURLContents(URL url) throws Exception {
-        ContentType contentType = getContentType(url);
-        if (contentType != ContentType.HTML) {
+        String contentType = getContentType(url);
+        if (!contentType.startsWith(HTML_CONTENT_TYPE_PREFIX)) {
             return null;
         }
 
@@ -79,10 +81,10 @@ public class URLProcessor {
      * we will only download and scrape web pages. This method will be used to
      * identify if a url returns a webpage or not.
      */
-    private ContentType getContentType(URL url) throws Exception {
+    private String getContentType(URL url) throws Exception {
         URLConnection conn = url.openConnection();
         String contentType = conn.getContentType();
-        return contentType.startsWith("text/html") ? ContentType.HTML : ContentType.Other;
+        return contentType;
     }
 
     private Optional<URL> makeUniformURL(URL pageURL, String href) {

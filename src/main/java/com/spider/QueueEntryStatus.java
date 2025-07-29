@@ -4,5 +4,6 @@ public enum QueueEntryStatus {
     PENDING,
     COMPLETED,
     ERRORED,
-    STATIC_ASSET,
+    STATIC,
+    SKIPPED,
 }
