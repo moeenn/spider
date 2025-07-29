@@ -35,6 +35,7 @@ public class Spider {
             return false;
         }
 
+        System.out.println("New URL: " + entry.getUrl().toString());
         urls.put(entry.getUrl().toString(), entry);
         return true;
     }
@@ -57,6 +58,7 @@ public class Spider {
                     results.add(newEntry);
                 }
             } catch (Exception ex) {
+                System.err.printf("error: %s: %s\n", entry.getUrl().toString(), ex.getMessage());
                 entry.setStatus(QueueEntryStatus.ERRORED);
             }
 

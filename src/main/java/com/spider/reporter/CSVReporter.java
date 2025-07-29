@@ -1,20 +1,16 @@
 package com.spider.reporter;
 
-import com.spider.QueueEntry;
-import com.spider.QueueEntryStatus;
+import java.util.List;
 
 public class CSVReporter extends Reporter {
     @Override
     public String report(ReportArgs args) {
+        List<ReportEntry> entries = args.getSortedUrls();
         StringBuilder builder = new StringBuilder();
+
         builder.append("URL,Status\n");
-
-        for (QueueEntry entry : args.urls()) {
-            builder.append(entry.getUrl() + "," + entry.getStatus() + "\n");
-        }
-
-        for (String sk : args.skipped()) {
-            builder.append(sk + "," + QueueEntryStatus.SKIPPED.toString() + "\n");
+        for (ReportEntry entry : entries) {
+            builder.append(entry.url() + "," + entry.status() + "\n");
         }
 
         return builder.toString();

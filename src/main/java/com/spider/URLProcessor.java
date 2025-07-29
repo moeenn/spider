@@ -68,6 +68,10 @@ public class URLProcessor {
 
     private Document getURLContents(URL url) throws Exception {
         String contentType = getContentType(url);
+        if (contentType == null) {
+            return null;
+        }
+
         if (!contentType.startsWith(HTML_CONTENT_TYPE_PREFIX)) {
             return null;
         }

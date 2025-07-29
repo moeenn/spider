@@ -5,12 +5,14 @@ import java.net.URL;
 import java.util.Optional;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 
 public class CommandLineArgs {
     private final String URL_FLAG_NAME = "url";
     private final String REPORT_FILE_NAME_FLAG = "report";
     private final String MAX_PARALLEL_FLAG = "max-parallel";
+    private final String HELP_FLAG = "help";
 
     private final URL url;
     private Optional<String> reportFileName = Optional.empty();
@@ -18,12 +20,20 @@ public class CommandLineArgs {
 
     public CommandLineArgs(String[] args) throws Exception {
         final Options options = new Options();
-        options.addOption(URL_FLAG_NAME, true, "Starting url to beging the spider");
+        options.addOption(URL_FLAG_NAME, true, "Starting url to begin the spider");
         options.addOption(REPORT_FILE_NAME_FLAG, true, "Report file name");
         options.addOption(MAX_PARALLEL_FLAG, true, "Maximum number of parallel requests");
+        options.addOption(HELP_FLAG, false, "Display program help");
 
         var parser = new DefaultParser();
         CommandLine commandLine = parser.parse(options, args);
+
+        if (commandLine.hasOption(HELP_FLAG)) {
+            HelpFormatter formatter = new HelpFormatter();
+            String cmdLineSyntax = "spider [options]";
+            formatter.printHelp(cmdLineSyntax, null, options, null);
+            System.exit(0);
+        }
 
         if (!commandLine.hasOption(URL_FLAG_NAME)) {
             throw new Exception("Missing url argument");
@@ -62,10 +72,10 @@ public class CommandLineArgs {
 
     @Override
     public String toString() {
-        if (reportFileName.isPresent()) {
-            return "Settings: \n  Report file: " + reportFileName + "\n  MaxParallel: " + maxParallel + "\n";
+        if (reportFileName.isEmpty()) {
+            return "Settings: \n  Output: Console \n  MaxParallel: " + maxParallel + "\n";
         }
 
-        return "Settings: \n  Report file: Console \n  MaxParallel: " + maxParallel + "\n";
+        return "Settings: \n  Output (file): " + reportFileName.get() + "\n  MaxParallel: " + maxParallel + "\n";
     }
 }
