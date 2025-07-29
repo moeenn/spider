@@ -19,20 +19,24 @@ public class URLProcessor {
             Set<String> skipped) {
     }
 
-    public ProcessResult process(URL url) throws Exception {
-        RawProcessResult rawURLs = getPageRawLinks(url);
+    public Optional<ProcessResult> process(URL url) throws Exception {
+        Optional<RawProcessResult> rawURLs = getPageRawLinks(url);
+        if (!rawURLs.isPresent()) {
+            return Optional.empty();
+        }
+
         List<URL> result = new ArrayList<>();
-        for (String rawURL : rawURLs.urls) {
+        for (String rawURL : rawURLs.get().urls) {
             Optional<URL> fullURL = makeUniformURL(url, rawURL);
             if (fullURL.isPresent()) {
                 result.add(fullURL.get());
             } else {
-                rawURLs.skipped.add(rawURL);
+                rawURLs.get().skipped.add(rawURL);
             }
         }
 
-        ProcessResult processResults = new ProcessResult(result, rawURLs.skipped);
-        return processResults;
+        ProcessResult processResults = new ProcessResult(result, rawURLs.get().skipped);
+        return Optional.of(processResults);
     }
 
     public static record RawProcessResult(
@@ -40,14 +44,10 @@ public class URLProcessor {
             Set<String> skipped) {
     }
 
-    private RawProcessResult getPageRawLinks(URL url) throws Exception {
+    private Optional<RawProcessResult> getPageRawLinks(URL url) throws Exception {
         Document doc = getURLContents(url);
         if (doc == null) {
-            return new RawProcessResult(new ArrayList<>(), new HashSet<>() {
-                {
-                    add(url.toString());
-                }
-            });
+            return Optional.empty();
         }
 
         Elements links = doc.select("a[href]");
@@ -61,7 +61,7 @@ public class URLProcessor {
         }
 
         RawProcessResult rawResult = new RawProcessResult(urls, new HashSet<>());
-        return rawResult;
+        return Optional.of(rawResult);
     }
 
     private Document getURLContents(URL url) throws Exception {

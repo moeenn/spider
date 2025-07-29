@@ -20,16 +20,16 @@ public class Main {
         Spider spider = new Spider(url);
         spider.run();
 
-        String report = spider.getReport();
-        Path filePath = Paths.get("report.csv");
+        String report = spider.getCSVReport();
+        Path filePath = Paths.get(commandLineArgs.getReportName());
         try {
             Files.writeString(filePath, report);
         } catch (Exception ex) {
-            System.err.printf("error: failed to write report file.");
+            System.err.printf("error: failed to write report file: %s\n", ex.getMessage());
             System.exit(1);
             return;
         }
 
-        System.out.println("Report written to report.csv");
+        System.out.printf("Report written to %s\n", filePath);
     }
 }

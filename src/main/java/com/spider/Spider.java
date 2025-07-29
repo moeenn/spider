@@ -3,6 +3,7 @@ package com.spider;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import com.spider.URLProcessor.ProcessResult;
@@ -28,21 +29,27 @@ public class Spider {
             return;
         }
 
-        for (QueueEntry url : urls.values()) {
-            if (!url.getStatus().equals(QueueEntryStatus.PENDING)) {
-                continue;
-            }
+        for (QueueEntry entry : urls.values()) {
+            if (entry.getStatus().equals(QueueEntryStatus.PENDING)) {
+                try {
+                    Optional<ProcessResult> pageURLs = processor.process(entry.getUrl());
+                    if (!pageURLs.isPresent()) {
+                        entry.setStatus(QueueEntryStatus.STATIC_ASSET);
+                        continue;
+                    }
 
-            try {
-                ProcessResult pageURLs = processor.process(url.getUrl());
-                for (URL newURL : pageURLs.urls()) {
-                    urls.put(newURL.toString(), new QueueEntry(newURL));
+                    entry.setStatus(QueueEntryStatus.COMPLETED);
+                    skipped.addAll(pageURLs.get().skipped());
+                    for (URL newURL : pageURLs.get().urls()) {
+                        if (urls.containsKey(newURL.toString())) {
+                            continue;
+                        } else {
+                            urls.put(newURL.toString(), new QueueEntry(newURL));
+                        }
+                    }
+                } catch (Exception ex) {
+                    entry.setStatus(QueueEntryStatus.ERRORED);
                 }
-
-                skipped.addAll(pageURLs.skipped());
-                url.setStatus(QueueEntryStatus.COMPLETED);
-            } catch (Exception ex) {
-                url.setStatus(QueueEntryStatus.ERRORED);
             }
         }
 
@@ -53,7 +60,7 @@ public class Spider {
         processQueue();
     }
 
-    public String getReport() {
+    public String getCSVReport() {
         StringBuilder builder = new StringBuilder();
         builder.append("URL,Status\n");
 
