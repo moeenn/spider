@@ -8,12 +8,13 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 
 public class CommandLineArgs {
-    private final URL url;
-    private Optional<String> reportFileName = Optional.empty();
-    private int maxParallel = 4;
     private final String URL_FLAG_NAME = "url";
     private final String REPORT_FILE_NAME_FLAG = "report";
     private final String MAX_PARALLEL_FLAG = "max-parallel";
+
+    private final URL url;
+    private Optional<String> reportFileName = Optional.empty();
+    private int maxParallel = 4;
 
     public CommandLineArgs(String[] args) throws Exception {
         final Options options = new Options();
@@ -43,7 +44,7 @@ public class CommandLineArgs {
                 maxParallel = Integer.parseInt(commandLine.getOptionValue(MAX_PARALLEL_FLAG));
             }
         } catch (Exception ex) {
-            throw new Exception("Invalid url argument: " + ex.getMessage());
+            throw new Exception("invalid url argument: " + ex.getMessage());
         }
     }
 
