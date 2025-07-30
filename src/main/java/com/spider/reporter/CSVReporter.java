@@ -11,9 +11,9 @@ public class CSVReporter extends Reporter {
 
         builder.append("URL,Status,Remarks\n");
         for (ReportEntry entry : entries) {
-            builder.append(entry.url() + "," + entry.status());
+            builder.append(entry.url() + "," + entry.status() + ",");
             if (entry.remarks().isPresent()) {
-                builder.append("," + entry.remarks().get());
+                builder.append(entry.remarks().get());
             }
             builder.append("\n");
         }
