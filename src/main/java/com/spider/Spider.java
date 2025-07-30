@@ -35,7 +35,6 @@ public class Spider {
             return false;
         }
 
-        System.out.println("New URL: " + entry.getUrl().toString());
         urls.put(entry.getUrl().toString(), entry);
         return true;
     }
@@ -47,7 +46,8 @@ public class Spider {
             try {
                 Optional<ProcessResult> processResults = processor.process(entry.getUrl());
                 if (!processResults.isPresent()) {
-                    entry.setStatus(QueueEntryStatus.STATIC);
+                    entry.setStatus(QueueEntryStatus.SKIPPED);
+                    entry.setRemarks("Static asset file.");
                     return results;
                 }
 
@@ -59,7 +59,7 @@ public class Spider {
                 }
             } catch (Exception ex) {
                 System.err.printf("error: %s: %s\n", entry.getUrl().toString(), ex.getMessage());
-                entry.setStatus(QueueEntryStatus.ERRORED);
+                entry.setErrorStatus(ex);
             }
 
             return results;

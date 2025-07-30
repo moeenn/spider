@@ -1,5 +1,6 @@
 package com.spider.reporter;
 
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,7 +16,7 @@ public record ReportArgs(List<QueueEntry> urls, Set<String> skipped) {
         }
 
         for (String sk : skipped()) {
-            entries.add(new ReportEntry(sk, QueueEntryStatus.SKIPPED));
+            entries.add(new ReportEntry(sk, QueueEntryStatus.SKIPPED, Optional.of("")));
         }
 
         Collections.sort(entries, (ReportEntry a, ReportEntry b) -> a.url().compareTo(b.url()));

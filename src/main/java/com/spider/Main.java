@@ -13,7 +13,7 @@ public class Main {
     private static void run(String[] args) throws Exception {
         CommandLineArgs commandLineArgs;
         commandLineArgs = new CommandLineArgs(args);
-        System.out.println(commandLineArgs);
+        System.out.printf("%s\n%s\n", commandLineArgs.toString(), "-".repeat(50));
 
         URL url = commandLineArgs.getURL();
         Spider spider = new Spider(commandLineArgs.getMaxParallel());
@@ -21,7 +21,8 @@ public class Main {
         Optional<String> reportName = commandLineArgs.getReportName();
         if (!reportName.isPresent()) {
             spider.run(url);
-            reportToConsole(spider);
+            String reportContent = spider.getReport(defaultReporter);
+            System.out.printf("\n%s\n%s", "-".repeat(50), reportContent);    
             return;
         }
 
@@ -35,12 +36,6 @@ public class Main {
         String reportContent = spider.getReport(reporter);
         Reporter.saveReport(reportContent, reportName.get());
         System.out.printf("Report written to %s\n", reportName.get());
-    }
-
-    private static void reportToConsole(Spider spider) {
-        String reportContent = spider.getReport(defaultReporter);
-        String separator = "-";
-        System.out.printf("\n%s\n%s", separator.repeat(50), reportContent);
     }
 
     public static void main(String[] args) {
