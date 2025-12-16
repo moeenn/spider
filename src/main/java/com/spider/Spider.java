@@ -48,7 +48,7 @@ public class Spider {
                 Optional<ProcessResult> processResults = processor.process(entry.getUrl());
                 if (!processResults.isPresent()) {
                     entry.setStatus(QueueEntryStatus.SKIPPED);
-                    entry.setRemarks("Asset / media file");
+                    entry.setRemarks("Asset/media file");
                     return results;
                 }
 
