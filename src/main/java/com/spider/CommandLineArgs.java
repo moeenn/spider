@@ -73,9 +73,9 @@ public class CommandLineArgs {
     @Override
     public String toString() {
         if (reportFileName.isEmpty()) {
-            return "Settings: \n  Output: Console \n  MaxParallel: " + maxParallel + "\n";
+            return "Settings = Output: Console, MaxParallel: " + maxParallel;
         }
 
-        return "Settings: \n  Output (file): " + reportFileName.get() + "\n  MaxParallel: " + maxParallel + "\n";
+        return "Settings = Output (file): " + reportFileName.get() + ", MaxParallel: " + maxParallel;
     }
 }

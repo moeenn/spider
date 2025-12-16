@@ -14,12 +14,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import com.spider.URLProcessor.ProcessResult;
+import com.spider.URLProcessor.SkippedURL;
 import com.spider.reporter.ReportArgs;
 import com.spider.reporter.Reporter;
 
 public class Spider {
     private Map<String, QueueEntry> urls;
-    private Set<String> skipped;
+    private Set<SkippedURL> skipped;
     private URLProcessor processor;
     private final int maxParallel;
 
@@ -47,11 +48,13 @@ public class Spider {
                 Optional<ProcessResult> processResults = processor.process(entry.getUrl());
                 if (!processResults.isPresent()) {
                     entry.setStatus(QueueEntryStatus.SKIPPED);
-                    entry.setRemarks("Static asset file.");
+                    entry.setRemarks("Asset / media file");
                     return results;
                 }
 
                 entry.setStatus(QueueEntryStatus.COMPLETED);
+                entry.setElapsed(processResults.get().elapsed());
+
                 skipped.addAll(processResults.get().skipped());
                 for (URL newURL : processResults.get().urls()) {
                     QueueEntry newEntry = new QueueEntry(newURL);

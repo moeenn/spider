@@ -3,6 +3,8 @@ package com.spider;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -17,8 +19,9 @@ public class URLProcessor {
     private final String HTML_CONTENT_TYPE_PREFIX = "text/html";
 
     public static record ProcessResult(
+            Duration elapsed,
             List<URL> urls,
-            Set<String> skipped) {
+            Set<SkippedURL> skipped) {
     }
 
     public Optional<ProcessResult> process(URL url) throws Exception {
@@ -29,44 +32,74 @@ public class URLProcessor {
 
         List<URL> result = new ArrayList<>();
         for (String rawURL : rawURLs.get().urls) {
-            Optional<URL> fullURL = makeUniformURL(url, rawURL);
-            if (fullURL.isPresent()) {
-                result.add(fullURL.get());
+            UniformURLResult fullURL = makeUniformURL(url, rawURL);
+            if (fullURL.skipReason.isEmpty()) {
+                result.add(fullURL.url);
             } else {
-                rawURLs.get().skipped.add(rawURL);
+                var skipped = assessSkippedURL(rawURL, fullURL.skipReason);
+                rawURLs.get().addSkipped(skipped);
             }
         }
 
-        ProcessResult processResults = new ProcessResult(result, rawURLs.get().skipped);
+        ProcessResult processResults = new ProcessResult(rawURLs.get().elapsed, result, rawURLs.get().skipped);
         return Optional.of(processResults);
     }
 
+    private SkippedURL assessSkippedURL(String url, Optional<String> skipReason) {
+        if (url.startsWith("mailto:")) {
+            return new SkippedURL(url, "Email link");
+        }
+
+        if (url.startsWith("tel:")) {
+            return new SkippedURL(url, "Phone number link");
+        }
+
+        if (skipReason.isPresent()) {
+            return new SkippedURL(url, skipReason.get());
+        }
+
+        return new SkippedURL(url, "Unknown reason for skipping");
+    }
+
+    public static record SkippedURL(String url, String reason) {
+    }
+
     public static record RawProcessResult(
+            Duration elapsed,
             List<String> urls,
-            Set<String> skipped) {
+            Set<SkippedURL> skipped) {
+
+        public void addSkipped(SkippedURL url) {
+            skipped.add(url);
+        }
     }
 
     private Optional<RawProcessResult> getPageRawLinks(URL url) throws Exception {
-        Document doc = getURLContents(url);
+        GetDocumentResult doc = getDocument(url);
         if (doc == null) {
             return Optional.empty();
         }
 
-        Elements links = doc.select("a[href]");
+        Elements links = doc.doc.select("a[href]");
         List<String> urls = new ArrayList<>();
         for (Element link : links) {
             String href = link.attr("href");
             if (href.isEmpty() || href.isBlank() || href.trim().equals("#") || href.trim().startsWith("#")) {
                 continue;
             }
-            urls.add(href);
+            urls.add(href.strip());
         }
 
-        RawProcessResult rawResult = new RawProcessResult(urls, new HashSet<>());
+        RawProcessResult rawResult = new RawProcessResult(doc.elapsed, urls, new HashSet<>());
         return Optional.of(rawResult);
     }
 
-    private Document getURLContents(URL url) throws Exception {
+    private static record GetDocumentResult(
+            Document doc,
+            Duration elapsed) {
+    }
+
+    private GetDocumentResult getDocument(URL url) throws Exception {
         String contentType = getContentType(url);
         if (contentType == null) {
             return null;
@@ -76,9 +109,13 @@ public class URLProcessor {
             return null;
         }
 
-        System.out.printf("Download page: %s\n", url);
+        Log.printf("download page: %s", url);
+        var start = Instant.now();
         Document doc = Jsoup.connect(url.toString()).get();
-        return doc;
+        var end = Instant.now();
+        Duration elapsed = Duration.between(start, end);
+
+        return new GetDocumentResult(doc, elapsed);
     }
 
     /**
@@ -91,7 +128,10 @@ public class URLProcessor {
         return contentType;
     }
 
-    private Optional<URL> makeUniformURL(URL pageURL, String href) {
+    private static record UniformURLResult(URL url, Optional<String> skipReason) {
+    }
+
+    private UniformURLResult makeUniformURL(URL pageURL, String href) {
         String protocol = pageURL.getProtocol();
         String host = pageURL.getHost();
 
@@ -104,10 +144,11 @@ public class URLProcessor {
                 // construct URL without query and fragment.
                 URI baseURI = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(),
                         null, null);
-                return Optional.of(baseURI.toURL());
+
+                return new UniformURLResult(baseURI.toURL(), Optional.empty());
             } catch (Exception ex) {
-                System.err.println("error: " + ex.getMessage());
-                return Optional.empty();
+                Log.println("error: " + ex.getMessage());
+                return new UniformURLResult(pageURL, Optional.of(ex.getMessage()));
             }
         }
 
@@ -115,14 +156,22 @@ public class URLProcessor {
             try {
                 URL url = new URI(href).toURL();
                 if (url.getProtocol().equals(protocol) && url.getHost().equals(host)) {
-                    return Optional.of(url);
+                    return new UniformURLResult(url, Optional.empty());
+                }
+
+                if (!url.getHost().equals(host)) {
+                    return new UniformURLResult(url, Optional.of("External link"));
+                }
+
+                if (!url.getProtocol().equals(protocol)) {
+                    return new UniformURLResult(url, Optional.of("Protocol mismatch"));
                 }
             } catch (Exception ex) {
-                System.err.println("error: " + ex.getMessage());
-                return Optional.empty();
+                Log.println("error: " + ex.getMessage());
+                return new UniformURLResult(null, Optional.of(ex.getMessage()));
             }
         }
 
-        return Optional.empty();
+        return new UniformURLResult(null, Optional.of("Malfomed URL"));
     }
 }

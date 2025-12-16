@@ -1,7 +1,6 @@
 package com.spider.reporter;
 
 import java.util.List;
-import java.util.Optional;
 
 public class CSVReporter extends Reporter {
     @Override
@@ -9,9 +8,15 @@ public class CSVReporter extends Reporter {
         List<ReportEntry> entries = args.getSortedUrls();
         StringBuilder builder = new StringBuilder();
 
-        builder.append("URL,Status,Remarks\n");
+        builder.append("URL, Elapsed, Status, Remarks\n");
         for (ReportEntry entry : entries) {
-            builder.append(entry.url() + "," + entry.status() + ",");
+            String elapsed = entry.elapsed()
+                    .map((d) -> {
+                        return String.format("%dms", d.toMillis());
+                    })
+                    .orElse("0ms");
+
+            builder.append(entry.url() + ", " + elapsed + ", " + entry.status() + ", ");
             if (entry.remarks().isPresent()) {
                 builder.append(entry.remarks().get());
             }

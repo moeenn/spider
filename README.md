@@ -20,7 +20,7 @@ usage: spider [options]
 $ mvn install
 
 # compile.
-$ mvn clean compile assembly:single
+$ mvn clean package
 
 # run jar.
 $ java -jar ./target/spider-1.0-jar-with-dependencies.jar
